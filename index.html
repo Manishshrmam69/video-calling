@@ -8,6 +8,11 @@
 </head>
 <body>
     <div class="video-call-container">
+        <div id="roomDisplay">
+            <p id="generatedRoomId"></p>
+            <input type="text" id="roomIdInput" placeholder="Enter Room ID">
+            <button id="joinRoomButton">Join Room</button>
+        </div>
         <video id="localVideo" autoplay playsinline></video>
         <video id="remoteVideo" autoplay playsinline></video>
         <button id="startButton">Start Call</button>
