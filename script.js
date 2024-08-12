@@ -2,10 +2,14 @@ const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 const startButton = document.getElementById('startButton');
 const hangupButton = document.getElementById('hangupButton');
+const joinRoomButton = document.getElementById('joinRoomButton');
+const roomIdInput = document.getElementById('roomIdInput');
+const generatedRoomId = document.getElementById('generatedRoomId');
 
 let localStream;
 let remoteStream;
 let peerConnection;
+let roomId;
 
 const configuration = {
     iceServers: [
@@ -13,8 +17,45 @@ const configuration = {
     ]
 };
 
+// Generate a unique room ID
+function generateRoomId() {
+    return Math.random().toString(36).substr(2, 9);
+}
+
+// Display the room ID
+function displayRoomId(id) {
+    generatedRoomId.textContent = `Your Room ID: ${id}`;
+}
+
+// Start a new room
+function startNewRoom() {
+    roomId = generateRoomId();
+    displayRoomId(roomId);
+    connectToSignalingServer(roomId);
+}
+
+// Join an existing room
+function joinRoom() {
+    roomId = roomIdInput.value;
+    if (roomId) {
+        connectToSignalingServer(roomId);
+    } else {
+        alert('Please enter a room ID.');
+    }
+}
+
+function connectToSignalingServer(roomId) {
+    signalingSocket = new WebSocket(`ws://localhost:8080?roomId=${roomId}`);
+
+    signalingSocket.onmessage = message => {
+        const data = JSON.parse(message.data);
+        handleSignal(data);
+    };
+}
+
 startButton.addEventListener('click', startCall);
 hangupButton.addEventListener('click', hangUp);
+joinRoomButton.addEventListener('click', joinRoom);
 
 async function startCall() {
     try {
@@ -53,6 +94,9 @@ function handleRemoteStream(event) {
 
 async function handleSignal(data) {
     if (data.type === 'offer') {
+        if (!peerConnection) {
+            startCall();  // Start call if peer connection doesn't exist
+        }
         await peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: data.sdp }));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -78,14 +122,11 @@ function hangUp() {
     }
 }
 
-const signalingServerUrl = 'ws://localhost:8080';
-const signalingSocket = new WebSocket(signalingServerUrl);
-
-signalingSocket.onmessage = message => {
-    const data = JSON.parse(message.data);
-    handleSignal(data);
-};
-
 function sendSignal(data) {
     signalingSocket.send(JSON.stringify(data));
 }
+
+let signalingSocket;
+
+// Start a new room when the page loads
+startNewRoom();
